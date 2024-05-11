@@ -1,3 +1,8 @@
+# Simple Webtoon Chapter Scraper
+# Version: 1.0
+# Author: https://github.com/Bartolumiu
+# GitHub repository: https://github.com/Bartolumiu/random-tools
+
 import argparse
 from bs4 import BeautifulSoup
 import requests
