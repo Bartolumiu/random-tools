@@ -19,7 +19,7 @@ pip install -r requirements.txt
 ```
 ## Roadmap
 
-See the [open issues](https://github.com/Bartolumiu/pkStaffManagement/issues) for a list of proposed features (and known issues).
+See the [open issues](https://github.com/Bartolumiu/random-tools/issues) for a list of proposed features (and known issues).
 
 ## Contributing
 
