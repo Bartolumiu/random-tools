@@ -1,0 +1,6 @@
+# Image Merger
+Pillow
+
+# Webtoon Scraper
+BeautifulSoup4
+requests
