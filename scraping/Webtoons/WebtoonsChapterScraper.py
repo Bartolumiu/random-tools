@@ -2,6 +2,7 @@
 # Version: 1.0
 # Author: https://github.com/Bartolumiu
 # GitHub repository: https://github.com/Bartolumiu/random-tools
+# Works with both https://www.webtoons.com/ and https://m.webtoons.com/ links (the mobile version goes slower as Webtoon redirects by default to the www version)
 
 import argparse
 from bs4 import BeautifulSoup
