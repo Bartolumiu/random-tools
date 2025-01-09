@@ -1,14 +1,18 @@
 
-# Random Python Tools
+# Random Tools and Scripts
 
-Random tools I sometimes create for pointless reasons.
+Random tools and scripts I sometimes create for pointless reasons.
 
 
 ## Getting Started
 
 To get a local copy of the tools follow these steps.
 
-### Prerequisites
+### Prerequisites (UserScripts)
+
+* [TamperMonkey](https://tampermonkey.net/)
+
+### Prerequisites (Python)
 
 * [Python](https://python.org/downloads/)
 
