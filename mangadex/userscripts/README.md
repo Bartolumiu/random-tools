@@ -14,4 +14,4 @@ A collection of UserScripts for MangaDex and related sites.
 2. Import the `.user.js` file into your extension.
 
 ## License
-MIT
+GPL-3.0
