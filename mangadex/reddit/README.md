@@ -22,4 +22,4 @@ python the_site_is_okay_bot.py
 ```
 
 ## License
-MIT
+GPL-3.0
