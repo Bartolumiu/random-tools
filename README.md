@@ -21,6 +21,18 @@ To get a local copy of the tools follow these steps.
 ```sh
 pip install -r requirements.txt
 ```
+## Projects
+
+This repository contains the following tools and scripts:
+
+- [images/divider](images/divider/README.md): Split images vertically into equal parts and add rows.
+- [images/merger](images/merger/README.md): Merge images via CLI or GUI, horizontally or vertically.
+- [webp2png](webp2png/README.md): Convert WebP images to PNG in bulk.
+- [massrename](massrename/README.md): Bulk file generation and renaming utilities.
+- [scraping/Webtoons](scraping/Webtoons/README.md): Scrape and download Webtoon chapters and metadata.
+- [mangadex/reddit](mangadex/reddit/README.md): Reddit bot for flairing and responding on r/mangadex.
+- [mangadex/userscripts](mangadex/userscripts/README.md): Userscripts for MangaDex and related sites.
+
 ## Roadmap
 
 See the [open issues](https://github.com/Bartolumiu/random-tools/issues) for a list of proposed features (and known issues).
