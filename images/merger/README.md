@@ -26,4 +26,4 @@ python mergerGUI.py
 Use the interface to select input folder, output folder, file name, and orientation.
 
 ## License
-MIT
+GPL-3.0
