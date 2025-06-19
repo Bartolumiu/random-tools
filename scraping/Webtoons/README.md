@@ -33,4 +33,4 @@ python webtoonsSeriesScraper.py
 ```
 
 ## License
-MIT
+GPL-3.0
