@@ -3,7 +3,7 @@
 // @namespace    https://mangadex.org/
 // @description  Add language selector dropdown
 // @icon         https://mangadex.org/favicon.ico
-// @version      0.13
+// @version      0.14
 // @updateURL    https://raw.githubusercontent.com/Bartolumiu/random-tools/refs/heads/main/mangadex/userscripts/MD_main_title_lang_select.user.js
 // @downloadURL  https://raw.githubusercontent.com/Bartolumiu/random-tools/refs/heads/main/mangadex/userscripts/MD_main_title_lang_select.user.js
 // @author       Bartolumiu
@@ -16,9 +16,14 @@
 (function () {
     'use strict';
 
+    const EDIT_TITLE_REGEX = /^\/title\/edit\/[a-f0-9-]+$/;
+    // View route: /title/{uuid} or /title/{uuid}/{slug}
+    const VIEW_TITLE_REGEX = /^\/title\/[a-f0-9-]+(?:\/[^/]+)?\/?$/;
+
     // --- STATE ---
     let selectedLang = null;
     let currentTitleText = null;
+    let fetchedTitleCache = {}; // cache mangaId -> { titleMap, detectedLang }
 
     // --- LOG UTILITY ---
     function logOnce(key, ...args) {
@@ -192,10 +197,8 @@
      * @returns {boolean} True if the dropdown was initialized, false otherwise.
      */
     function initDropdown() {
-        // Check if we're on a title edit page
-        if (!location.pathname.includes('/title/edit/')) {
-            return false;
-        }
+        // Strictly only run on /title/edit/:id
+        if (!EDIT_TITLE_REGEX.test(location.pathname)) return false;
 
         const container = Array.from(document.querySelectorAll('.input-container'))
             .find(c => c.querySelector('.required')?.textContent.trim().startsWith('Title'));
@@ -394,9 +397,129 @@
      * @returns {void} Nothing at all
      */
     function tryInitDropdown() {
+        if (!EDIT_TITLE_REGEX.test(location.pathname)) return; // don't even schedule tries if route doesn't match
         let tries = 0;
         const iv = setInterval(() => {
             if (initDropdown() || tries++ > 10) clearInterval(iv);
+        }, 300);
+    }
+
+    /**
+     * Initialize the flag icon on /title/:id view pages (not edit pages).
+     * @returns {boolean}
+     */
+    function initViewTitleFlag() {
+        // Only run on /title/{uuid} (no trailing slash or extra path segments)
+        if (!VIEW_TITLE_REGEX.test(location.pathname)) {
+            return false;
+        }
+
+        console.info('[LangSelector] Attempting to initialize view title flag');
+        const container = document.querySelector('div.title');
+        if (!container) return false;
+        const mainTitleEl = container.querySelector('p.mb-1');
+        if (!mainTitleEl || mainTitleEl._flagInit) return false;
+
+        console.info('[LangSelector] Found main title element:', mainTitleEl);
+        const match = /\/title\/([a-f0-9-]+)/.exec(location.pathname);
+        const mangaId = match?.[1];
+        if (!mangaId) return false;
+
+        mainTitleEl._flagInit = true; // prevent duplicate attempts
+
+        const displayedTitle = (mainTitleEl.textContent || '').trim();
+
+        const applyFlag = (langCode) => {
+            if (!langCode) return;
+            const langMeta = LANGUAGES.find(l => l.code === langCode);
+            if (!langMeta) return;
+            // Avoid duplicating flag
+            if (container.querySelector('img.__md-main-title-flag')) return;
+            // Wrapper for flag + optional script overlay to keep title layout stable
+            const wrapper = createEl('span', {
+                className: '__md-main-title-flag-wrapper',
+                style: {
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    marginRight: '12px',
+                    verticalAlign: 'middle'
+                }
+            });
+
+            const flagImg = createEl('img', {
+                src: langMeta.flag,
+                width: 28,
+                height: 28,
+                title: `${langMeta.name} (${langCode})`,
+                alt: langCode,
+                className: '__md-main-title-flag select-none',
+                style: {
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    position: 'relative',
+                    top: '4px'
+                }
+            });
+            wrapper.appendChild(flagImg);
+
+        // Add script icon for any language entry that declares a script asset (zh, zh-hk, zh-ro, ja, ja-ro, ko, ko-ro)
+        if (langMeta.script) {
+                const scriptImg = createEl('img', {
+                    src: langMeta.script,
+                    width: 12,
+                    height: 12,
+                    alt: 'script',
+            title: `${langMeta.name} script`,
+                    className: '__md-main-title-script select-none',
+                    style: {
+                        marginLeft: '-10px',
+                        marginTop: '18px',
+                        position: 'relative'
+                    }
+                });
+                wrapper.appendChild(scriptImg);
+            }
+
+            // Insert wrapper at the beginning of the <p>
+            mainTitleEl.insertBefore(wrapper, mainTitleEl.firstChild);
+        };
+
+        const processTitleMap = (titleMap) => {
+            if (!titleMap || typeof titleMap !== 'object') return;
+            // Try to find exact match (case sensitive), then case-insensitive.
+            let found = Object.entries(titleMap).find(([code, title]) => title === displayedTitle);
+            if (!found) {
+                found = Object.entries(titleMap).find(([code, title]) => title.toLowerCase() === displayedTitle.toLowerCase());
+            }
+            const langCode = found ? found[0] : Object.keys(titleMap)[0];
+            applyFlag(langCode);
+            fetchedTitleCache[mangaId] = { titleMap, detectedLang: langCode };
+        };
+
+        console.info('[LangSelector] Attempting to fetch manga info for flag:', mangaId);
+
+        // Use cache if present
+        if (fetchedTitleCache[mangaId]) {
+            applyFlag(fetchedTitleCache[mangaId].detectedLang);
+            return true;
+        }
+
+        fetch(`https://api.mangadex.org/manga/${mangaId}`)
+            .then(r => r.json())
+            .then(data => {
+                const titleMap = data?.data?.attributes?.title;
+                processTitleMap(titleMap);
+            })
+            .catch(err => console.error('[LangSelector] Failed to fetch manga info for flag', err));
+
+        return true; // We've set up processing
+    }
+
+    function tryInitViewTitleFlag() {
+        if (!VIEW_TITLE_REGEX.test(location.pathname)) return; // don't schedule on non-view routes
+        let tries = 0;
+        const iv = setInterval(() => {
+            if (initViewTitleFlag() || tries++ > 10) clearInterval(iv);
         }, 300);
     }
 
@@ -410,16 +533,28 @@
             currentPath = location.pathname;
             console.info('[LangSelector] Route changed to:', currentPath);
             // Small delay to let the new page content load
-            setTimeout(tryInitDropdown, 100);
+            setTimeout(() => {
+                if (EDIT_TITLE_REGEX.test(location.pathname)) {
+                    tryInitDropdown();
+                } else if (VIEW_TITLE_REGEX.test(location.pathname)) {
+                    tryInitViewTitleFlag();
+                }
+            }, 100);
         }
     });
 
     // Start observing when DOM is ready
     document.addEventListener('DOMContentLoaded', () => {
-        observer.observe(document.body, { 
-            childList: true, 
-            subtree: true 
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
         });
+        // Attempt only the relevant initializer on first load
+        if (EDIT_TITLE_REGEX.test(location.pathname)) {
+            tryInitDropdown();
+        } else if (VIEW_TITLE_REGEX.test(location.pathname)) {
+            tryInitViewTitleFlag();
+        }
     });
 
 })();
