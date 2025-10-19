@@ -1,8 +1,6 @@
-
 # Random Tools and Scripts
 
 Random tools and scripts I sometimes create for pointless reasons.
-
 
 ## Getting Started
 
@@ -10,17 +8,18 @@ To get a local copy of the tools follow these steps.
 
 ### Prerequisites (UserScripts)
 
-* [TamperMonkey](https://tampermonkey.net/)
+- [TamperMonkey](https://tampermonkey.net/)
 
 ### Prerequisites (Python)
 
-* [Python](https://python.org/downloads/)
+- [Python](https://python.org/downloads/)
 
-* Some dependencies
+- Some dependencies
 
 ```sh
 pip install -r requirements.txt
 ```
+
 ## Projects
 
 This repository contains the following tools and scripts:
@@ -40,9 +39,10 @@ See the [open issues](https://github.com/Bartolumiu/random-tools/issues) for a l
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-* If you have suggestions for adding or removing projects, feel free to [open an issue](https://github.com/Bartolumiu/random-tools/issues/new) to discuss it, or directly create a pull request after you edit the *README.md* file with necessary changes.
-* Please make sure you check your spelling and grammar.
-* Create individual PR for each suggestion.
+
+- If you have suggestions for adding or removing projects, feel free to [open an issue](https://github.com/Bartolumiu/random-tools/issues/new) to discuss it, or directly create a pull request after you edit the _README.md_ file with necessary changes.
+- Please make sure you check your spelling and grammar.
+- Create individual PR for each suggestion.
 
 ### Creating A Pull Request
 
@@ -52,11 +52,9 @@ Contributions are what make the open source community such an amazing place to b
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-
 ## License
 
 Distributed under the GNU General Public License v3.0. See [LICENSE](https://github.com/Bartolumiu/random-tools/blob/main/LICENSE) for more information.
-
 
 ## Authors
 
