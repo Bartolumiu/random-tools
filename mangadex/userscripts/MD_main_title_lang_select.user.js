@@ -3,7 +3,7 @@
 // @namespace    https://mangadex.org/
 // @description  Add language selector dropdown
 // @icon         https://mangadex.org/favicon.ico
-// @version      0.14
+// @version      0.15
 // @updateURL    https://raw.githubusercontent.com/Bartolumiu/random-tools/refs/heads/main/mangadex/userscripts/MD_main_title_lang_select.user.js
 // @downloadURL  https://raw.githubusercontent.com/Bartolumiu/random-tools/refs/heads/main/mangadex/userscripts/MD_main_title_lang_select.user.js
 // @author       Bartolumiu
@@ -398,6 +398,7 @@
      */
     function tryInitDropdown() {
         if (!EDIT_TITLE_REGEX.test(location.pathname)) return; // don't even schedule tries if route doesn't match
+        if (location.hostname.includes('canary')) return; // Dropdown no longer needed in Canary
         let tries = 0;
         const iv = setInterval(() => {
             if (initDropdown() || tries++ > 10) clearInterval(iv);
