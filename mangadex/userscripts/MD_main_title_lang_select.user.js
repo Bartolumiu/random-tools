@@ -3,7 +3,7 @@
 // @namespace    https://mangadex.org/
 // @description  Add language selector dropdown
 // @icon         https://mangadex.org/favicon.ico
-// @version      0.15
+// @version      0.16
 // @updateURL    https://raw.githubusercontent.com/Bartolumiu/random-tools/refs/heads/main/mangadex/userscripts/MD_main_title_lang_select.user.js
 // @downloadURL  https://raw.githubusercontent.com/Bartolumiu/random-tools/refs/heads/main/mangadex/userscripts/MD_main_title_lang_select.user.js
 // @author       Bartolumiu
@@ -16,7 +16,6 @@
 (function () {
     'use strict';
 
-    const EDIT_TITLE_REGEX = /^\/title\/edit\/[a-f0-9-]+$/;
     // View route: /title/{uuid} or /title/{uuid}/{slug}
     const VIEW_TITLE_REGEX = /^\/title\/[a-f0-9-]+(?:\/[^/]+)?\/?$/;
 
@@ -193,219 +192,6 @@
     }
 
     /**
-     * Initialize the language dropdown.
-     * @returns {boolean} True if the dropdown was initialized, false otherwise.
-     */
-    function initDropdown() {
-        // Strictly only run on /title/edit/:id
-        if (!EDIT_TITLE_REGEX.test(location.pathname)) return false;
-
-        const container = Array.from(document.querySelectorAll('.input-container'))
-            .find(c => c.querySelector('.required')?.textContent.trim().startsWith('Title'));
-        if (!container) return false;
-        const textItem = container.querySelector('.text-item-container');
-        if (!textItem || textItem._init) return false;
-        textItem._init = true;
-
-        const inp = textItem.querySelector('input.inline-input');
-        if (!inp) return false;
-
-        const btnFlagImg = createEl('img', {
-            src: LANGUAGES[0].flag, width: 24, height: 24,
-            title: LANGUAGES[0].name, alt: LANGUAGES[0].name,
-            style: { minWidth: '25px', minHeight: '24px' },
-            className: 'select-none'
-        });
-
-        const btnScriptImg = createEl('img', {
-            src: '', width: 12, height: 12,
-            style: {
-                marginLeft: '-12px',
-                marginTop: '12px',
-                display: 'none'
-            },
-            className: 'select-none'
-        });
-
-        const chevronSvg = createEl('svg', {
-            xmlns: 'http://www.w3.org/2000/svg', width: 24, height: 24,
-            fill: 'none',
-            stroke: 'currentColor',
-            'stroke-linecap': 'round',
-            'stroke-linejoin': 'round',
-            'stroke-width': '2',
-            class: 'feather feather-chevron-down icon text-icon-contrast text-undefined rotating-arrow ml-1',
-            viewbox: '0 0 24 24',
-            style: { transition: 'transform 0.2s ease' }
-        }, [
-            createEl('path', {
-                d: 'm6 9 6 6 6-6',
-                stroke: 'currentColor',
-                'stroke-linecap': 'round',
-                'stroke-linejoin': 'round',
-                'stroke-width': '2'
-            })
-        ]);
-
-        const btnInner = createEl('div', {
-            className: 'relative whitespace-nowrap flex items-center cursor-pointer select-none'
-        }, [
-            btnFlagImg,
-            btnScriptImg,
-            chevronSvg
-        ]);
-        const btn = createEl('div', {
-            className: 'md-select focus:outline-none md-select--no-label select-none',
-            tabindex: 0
-        }, [btnInner]);
-
-        const match = RegExp(/\/title\/edit\/([a-f0-9-]+)/).exec(location.pathname);
-        const mangaId = match?.[1];
-
-        if (mangaId) {
-            fetch(`https://api.mangadex.org/manga/${mangaId}`)
-                .then(res => res.json())
-                .then(data => {
-                    const titleMap = data?.data?.attributes?.title;
-                    if (titleMap && typeof titleMap === 'object') {
-                        const [lang, title] = Object.entries(titleMap)[0];
-                        if (LANGUAGES.some(l => l.code === lang)) {
-                            selectedLang = lang;
-                            currentTitleText = title;
-                            const langMeta = LANGUAGES.find(l => l.code === selectedLang);
-                            btnFlagImg.src = langMeta.flag;
-                            btnFlagImg.title = langMeta.name;
-                            btnFlagImg.alt = langMeta.name;
-                            if (langMeta.script) {
-                                btnScriptImg.src = langMeta.script;
-                                btnScriptImg.style.display = 'inline';
-                            } else {
-                                btnScriptImg.style.display = 'none';
-                            }
-                            inp.value = title;
-                            inp.dispatchEvent(new Event('input', { bubbles: true }));
-                            console.info(`[LangSelector] Detected language from API: ${selectedLang}`)
-                        }
-                    }
-                })
-                .catch(err => console.error('[LangSelector] Failed to fetch manga title info', err));
-        }
-
-        inp.addEventListener('input', () => {
-            currentTitleText = inp.value;
-        });
-
-        const list = createEl('div', {
-            className: 'absolute overflow-x-hidden overscroll-contain z-10 bg-accent shadow rounded-b hidden',
-            style: { 
-                display: 'none', 
-                top: '100%', 
-                left: '0', 
-                minWidth: '250px',
-                maxHeight: '300px',
-                overflowY: 'auto'
-            }
-        });
-
-        LANGUAGES.forEach(lang => {
-            const item = createEl('div', {
-                className: 'select-none',
-                style: {
-                    display: 'flex', alignItems: 'center',
-                    padding: '6px 8px', cursor: 'pointer'
-                }
-            }, [
-                createEl('img', {
-                    src: lang.flag, width: 24, height: 24,
-                    title: lang.name, alt: lang.name,
-                    style: { marginRight: '12px' },
-                    className: 'select-none'
-                }),
-                ...(lang.script ? [createEl('img', {
-                    src: lang.script, width: 12, height: 12,
-                    title: lang.name, alt: lang.name,
-                    style: { marginLeft: '-20px', marginTop: '12px', marginRight: '8px' },
-                    className: 'select-none'
-                })] : []),
-                document.createTextNode(' ' + lang.name)
-            ]);
-
-            item.addEventListener('click', () => {
-                selectedLang = lang.code;
-                btnFlagImg.src = lang.flag;
-                btnFlagImg.title = lang.name;
-                btnFlagImg.alt = lang.name;
-                if (lang.script) {
-                    btnScriptImg.src = lang.script;
-                    btnScriptImg.style.display = 'inline';
-                } else {
-                    btnScriptImg.style.display = 'none';
-                }
-                list.style.display = 'none';
-                inp.dispatchEvent(new Event('input', { bubbles: true }));
-                document.querySelector('.actions .primary.disabled')?.classList.remove('disabled');
-                console.info(`[LangSelector] language set to ${lang.code}`);
-            });
-
-            item.addEventListener('mouseover', () => item.style.background = 'rgba(0,0,0,0.05)');
-            item.addEventListener('mouseout', () => item.style.background = 'transparent');
-
-            list.appendChild(item);
-        });
-
-    const dd = createEl('div', { className: 'relative' }, [btn, list]);
-        btn.addEventListener('click', () => {
-            const isHidden = list.style.display === 'none';
-            list.style.display = isHidden ? 'block' : 'none';
-            // Toggle chevron rotation
-            chevronSvg.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-        });
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!dd.contains(e.target)) {
-                list.style.display = 'none';
-                chevronSvg.style.transform = 'rotate(0deg)';
-            }
-        });
-
-        // Close dropdown when scrolling outside
-        document.addEventListener('scroll', () => {
-            list.style.display = 'none';
-            chevronSvg.style.transform = 'rotate(0deg)';
-        });
-
-        const divider = textItem.querySelector('.bg-current');
-        textItem.insertBefore(dd, divider || textItem.firstChild);
-        if (!textItem.querySelector('.bg-current')) {
-            const shade = createEl('div', {
-                className: 'bg-current opacity-30',
-                style: { minWidth: '1px', height: '24px' }
-            });
-            textItem.insertBefore(shade, dd.nextSibling);
-        }
-
-        console.info('[LangSelector] dropdown injected');
-        return true;
-    }
-
-    /**
-     * Try to initialize the language dropdown with retries.
-     * This is to be able to handle cases where the DOM is not fully loaded yet.
-     * It will attempt to initialize the dropdown every 300ms for up to 10 tries.
-     * If it succeeds, it will stop trying.
-     * @returns {void} Nothing at all
-     */
-    function tryInitDropdown() {
-        if (!EDIT_TITLE_REGEX.test(location.pathname)) return; // don't even schedule tries if route doesn't match
-        if (location.hostname.includes('canary')) return; // Dropdown no longer needed in Canary
-        let tries = 0;
-        const iv = setInterval(() => {
-            if (initDropdown() || tries++ > 10) clearInterval(iv);
-        }, 300);
-    }
-
-    /**
      * Initialize the flag icon on /title/:id view pages (not edit pages).
      * @returns {boolean}
      */
@@ -463,14 +249,14 @@
             });
             wrapper.appendChild(flagImg);
 
-        // Add script icon for any language entry that declares a script asset (zh, zh-hk, zh-ro, ja, ja-ro, ko, ko-ro)
-        if (langMeta.script) {
+            // Add script icon for any language entry that declares a script asset (zh, zh-hk, zh-ro, ja, ja-ro, ko, ko-ro)
+            if (langMeta.script) {
                 const scriptImg = createEl('img', {
                     src: langMeta.script,
                     width: 12,
                     height: 12,
                     alt: 'script',
-            title: `${langMeta.name} script`,
+                    title: `${langMeta.name} script`,
                     className: '__md-main-title-script select-none',
                     style: {
                         marginLeft: '-10px',
@@ -524,9 +310,6 @@
         }, 300);
     }
 
-    // Initial attempt when DOM is ready
-    document.addEventListener('DOMContentLoaded', tryInitDropdown);
-
     // Monitor for route changes in SPA
     let currentPath = location.pathname;
     const observer = new MutationObserver(() => {
@@ -535,11 +318,7 @@
             console.info('[LangSelector] Route changed to:', currentPath);
             // Small delay to let the new page content load
             setTimeout(() => {
-                if (EDIT_TITLE_REGEX.test(location.pathname)) {
-                    tryInitDropdown();
-                } else if (VIEW_TITLE_REGEX.test(location.pathname)) {
-                    tryInitViewTitleFlag();
-                }
+                if (VIEW_TITLE_REGEX.test(location.pathname)) tryInitViewTitleFlag();
             }, 100);
         }
     });
@@ -551,11 +330,7 @@
             subtree: true
         });
         // Attempt only the relevant initializer on first load
-        if (EDIT_TITLE_REGEX.test(location.pathname)) {
-            tryInitDropdown();
-        } else if (VIEW_TITLE_REGEX.test(location.pathname)) {
-            tryInitViewTitleFlag();
-        }
+        if (VIEW_TITLE_REGEX.test(location.pathname)) tryInitViewTitleFlag();
     });
 
 })();
