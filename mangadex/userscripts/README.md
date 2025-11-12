@@ -41,6 +41,7 @@ Click any link below (Tampermonkey should prompt to install):
 | copy-chapter-id-button    | [Install](https://raw.githubusercontent.com/Bartolumiu/random-tools/main/mangadex/userscripts/copy-chapter-id-button.user.js)    |
 | MD_main_title_lang_select | [Install](https://raw.githubusercontent.com/Bartolumiu/random-tools/main/mangadex/userscripts/MD_main_title_lang_select.user.js) |
 | MD_title_reorder          | [Install](https://raw.githubusercontent.com/Bartolumiu/random-tools/main/mangadex/userscripts/MD_title_reorder.user.js)          |
+| MD_views                  | [Install](https://raw.githubusercontent.com/Bartolumiu/random-tools/main/mangadex/userscripts/MD_views.user.js)                  |
 
 ## License
 
