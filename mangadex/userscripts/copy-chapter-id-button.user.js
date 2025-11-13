@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Copy Chapter ID Button
 // @namespace    https://mangadex.org/
-// @version      1.1
+// @version      1.2
 // @description  Adds a button to copy the chapter ID to the clipboard in MangaDex chapter entries.
 // @author       Bartolumiu
 // @license      GPL-3.0
@@ -33,7 +33,11 @@
             width: 20px;
         }
     `);
-
+    GM_addStyle(`
+        .copy-chapter-id-chapter-title-max-width {
+            max-width: calc(100% - 30px);
+        }
+    `);
     function createSVG(icon) {
         const template = document.createElement('template');
         template.innerHTML = icon.trim();
@@ -87,6 +91,7 @@
             });
 
             chapterSpan.appendChild(button);
+            button.previousElementSibling.className += ' copy-chapter-id-chapter-title-max-width'
         });
     }
 
