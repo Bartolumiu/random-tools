@@ -1,6 +1,7 @@
 // ==UserScript==
 // @name         MangaDex MDList Cloning Tool
 // @namespace    https://mangadex.org
+// @icon         https://mangadex.org/favicon.ico
 // @version      2.4.1
 // @description  MDList Cloning Tool
 // @author       Bartolumiu
