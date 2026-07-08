@@ -43,6 +43,7 @@ Click any link below (Tampermonkey should prompt to install):
 | MD_title_reorder          | [Install](https://raw.githubusercontent.com/Bartolumiu/random-tools/main/mangadex/userscripts/MD_title_reorder.user.js)          |
 | MD_views                  | [Install](https://raw.githubusercontent.com/Bartolumiu/random-tools/main/mangadex/userscripts/MD_views.user.js)                  |
 | MD_list_clone             | [Install](https://raw.githubusercontent.com/Bartolumiu/random-tools/main/mangadex/userscripts/MD_list_clone.user.js)             |
+| MD_import_namicomi        | [Install](https://raw.githubusercontent.com/Bartolumiu/random-tools/main/mangadex/userscripts/MD_import_namicomi.user.js)        |
 
 ## License
 
