@@ -2,7 +2,7 @@
 // @name         MangaDex MDList Cloning Tool
 // @namespace    https://mangadex.org
 // @icon         https://mangadex.org/favicon.ico
-// @version      2.4.1
+// @version      2.4.2
 // @description  MDList Cloning Tool
 // @author       Bartolumiu
 // @match        https://mangadex.org/*
@@ -15,6 +15,38 @@
 (function() {
     'use strict';
 
+    // --- DOM Helpers (Bypass Trusted Types CSP) ---
+    function createEl(tag, attrs = {}, ...children) {
+        const el = document.createElement(tag);
+        for (const [key, value] of Object.entries(attrs)) {
+            if (key === 'className') el.className = value;
+            else if (key === 'style') el.style.cssText = value;
+            else if (key === 'id') el.id = value;
+            else el.setAttribute(key, value);
+        }
+        for (const child of children) {
+            if (child === undefined || child === null) continue;
+            if (typeof child === 'string' || typeof child === 'number') {
+                el.appendChild(document.createTextNode(child));
+            } else {
+                el.appendChild(child);
+            }
+        }
+        return el;
+    }
+
+    const svgNS = "http://www.w3.org/2000/svg";
+    function createSVGEl(tag, attrs = {}, ...children) {
+        const el = document.createElementNS(svgNS, tag);
+        for (const [key, value] of Object.entries(attrs)) {
+            el.setAttribute(key, value);
+        }
+        for (const child of children) {
+            if (child) el.appendChild(child);
+        }
+        return el;
+    }
+
     // --- Configuration & Constants ---
 
     const SPECIAL_LISTS = {
@@ -24,11 +56,25 @@
     };
 
     const ICONS = {
-        CLONE: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="icon size-6 mr-4"><path fill="currentColor" d="M9 18q-.825 0-1.412-.587T7 16V4q0-.825.588-1.412T9 2h9q.825 0 1.413.588T20 4v12q0 .825-.587 1.413T18 18zm0-2h9V4H9zM3.288 7.713Q3 7.425 3 7t.288-.712T4 6t.713.288T5 7t-.288.713T4 8t-.712-.288m0 3.5Q3 10.926 3 10.5t.288-.712T4 9.5t.713.288T5 10.5t-.288.713T4 11.5t-.712-.288m0 3.5Q3 14.426 3 14t.288-.712T4 13t.713.288T5 14t-.288.713T4 15t-.712-.288m0 3.5Q3 17.926 3 17.5t.288-.712T4 16.5t.713.288T5 17.5t-.288.713T4 18.5t-.712-.288m0 3.5Q3 21.426 3 21t.288-.712T4 20t.713.288T5 21t-.288.713T4 22t-.712-.288m3.5 0Q6.5 21.426 6.5 21t.288-.712T7.5 20t.713.288T8.5 21t-.288.713T7.5 22t-.712-.288m3.5 0Q10 21.426 10 21t.288-.712T11 20t.713.288T12 21t-.288.713T11 22t-.712-.288m3.5 0Q13.5 21.426 13.5 21t.288-.712T14.5 20t.713.288t.287.712t-.288.713T14.5 22t-.712-.288"></path></svg>`,
-        CLONE_SM: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="icon size-6 mr-2"><path fill="currentColor" d="M9 18q-.825 0-1.412-.587T7 16V4q0-.825.588-1.412T9 2h9q.825 0 1.413.588T20 4v12q0 .825-.587 1.413T18 18zm0-2h9V4H9zM3.288 7.713Q3 7.425 3 7t.288-.712T4 6t.713.288T5 7t-.288.713T4 8t-.712-.288m0 3.5Q3 10.926 3 10.5t.288-.712T4 9.5t.713.288T5 10.5t-.288.713T4 11.5t-.712-.288m0 3.5Q3 14.426 3 14t.288-.712T4 13t.713.288T5 14t-.288.713T4 15t-.712-.288m0 3.5Q3 17.926 3 17.5t.288-.712T4 16.5t.713.288T5 17.5t-.288.713T4 18.5t-.712-.288m0 3.5Q3 21.426 3 21t.288-.712T4 20t.713.288T5 21t-.288.713T4 22t-.712-.288m3.5 0Q6.5 21.426 6.5 21t.288-.712T7.5 20t.713.288T8.5 21t-.288.713T7.5 22t-.712-.288m3.5 0Q10 21.426 10 21t.288-.712T11 20t.713.288T12 21t-.288.713T11 22t-.712-.288m3.5 0Q13.5 21.426 13.5 21t.288-.712T14.5 20t.713.288t.287.712t-.288.713T14.5 22t-.712-.288"></path></svg>`,
-        EXPORT: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon size-6 mr-4"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>`,
-        IMPORT: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon size-6 mr-4"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>`,
-        CLOSE: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" class="icon size-6 med" style="color: currentcolor;"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6 6 18M6 6l12 12"></path></svg>`
+        CLONE: () => createSVGEl('svg', { width: "24", height: "24", viewBox: "0 0 24 24", class: "icon size-6 mr-4" },
+            createSVGEl('path', { fill: "currentColor", d: "M9 18q-.825 0-1.412-.587T7 16V4q0-.825.588-1.412T9 2h9q.825 0 1.413.588T20 4v12q0 .825-.587 1.413T18 18zm0-2h9V4H9zM3.288 7.713Q3 7.425 3 7t.288-.712T4 6t.713.288T5 7t-.288.713T4 8t-.712-.288m0 3.5Q3 10.926 3 10.5t.288-.712T4 9.5t.713.288T5 10.5t-.288.713T4 11.5t-.712-.288m0 3.5Q3 14.426 3 14t.288-.712T4 13t.713.288T5 14t-.288.713T4 15t-.712-.288m0 3.5Q3 17.926 3 17.5t.288-.712T4 16.5t.713.288T5 17.5t-.288.713T4 18.5t-.712-.288m0 3.5Q3 21.426 3 21t.288-.712T4 20t.713.288T5 21t-.288.713T4 22t-.712-.288m3.5 0Q6.5 21.426 6.5 21t.288-.712T7.5 20t.713.288T8.5 21t-.288.713T7.5 22t-.712-.288m3.5 0Q10 21.426 10 21t.288-.712T11 20t.713.288T12 21t-.288.713T11 22t-.712-.288m3.5 0Q13.5 21.426 13.5 21t.288-.712T14.5 20t.713.288t.287.712t-.288.713T14.5 22t-.712-.288" })
+        ),
+        CLONE_SM: () => createSVGEl('svg', { width: "24", height: "24", viewBox: "0 0 24 24", class: "icon size-6 mr-2" },
+            createSVGEl('path', { fill: "currentColor", d: "M9 18q-.825 0-1.412-.587T7 16V4q0-.825.588-1.412T9 2h9q.825 0 1.413.588T20 4v12q0 .825-.587 1.413T18 18zm0-2h9V4H9zM3.288 7.713Q3 7.425 3 7t.288-.712T4 6t.713.288T5 7t-.288.713T4 8t-.712-.288m0 3.5Q3 10.926 3 10.5t.288-.712T4 9.5t.713.288T5 10.5t-.288.713T4 11.5t-.712-.288m0 3.5Q3 14.426 3 14t.288-.712T4 13t.713.288T5 14t-.288.713T4 15t-.712-.288m0 3.5Q3 17.926 3 17.5t.288-.712T4 16.5t.713.288T5 17.5t-.288.713T4 18.5t-.712-.288m0 3.5Q3 21.426 3 21t.288-.712T4 20t.713.288T5 21t-.288.713T4 22t-.712-.288m3.5 0Q6.5 21.426 6.5 21t.288-.712T7.5 20t.713.288T8.5 21t-.288.713T7.5 22t-.712-.288m3.5 0Q10 21.426 10 21t.288-.712T11 20t.713.288T12 21t-.288.713T11 22t-.712-.288m3.5 0Q13.5 21.426 13.5 21t.288-.712T14.5 20t.713.288t.287.712t-.288.713T14.5 22t-.712-.288" })
+        ),
+        EXPORT: () => createSVGEl('svg', { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round", class: "icon size-6 mr-4" },
+            createSVGEl('path', { d: "M12 15V3" }),
+            createSVGEl('path', { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
+            createSVGEl('path', { d: "m7 10 5 5 5-5" })
+        ),
+        IMPORT: () => createSVGEl('svg', { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round", class: "icon size-6 mr-4" },
+            createSVGEl('path', { d: "M12 3v12" }),
+            createSVGEl('path', { d: "m17 8-5-5-5 5" }),
+            createSVGEl('path', { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" })
+        ),
+        CLOSE: () => createSVGEl('svg', { width: "24", height: "24", fill: "none", viewBox: "0 0 24 24", class: "icon size-6 med", style: "color: currentcolor;" },
+            createSVGEl('path', { stroke: "currentColor", "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-width": "2", d: "M18 6 6 18M6 6l12 12" })
+        )
     };
 
     // --- State Management ---
@@ -77,12 +123,6 @@
         }
     }
 
-    function escapeHtml(text) {
-        return text.replace(/[&<>"']/g, function(m) {
-            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
-        });
-    }
-
     function isPayloadTooLarge(name, visibility, version, mangaIds) {
         const payload = JSON.stringify({ name, visibility, manga: mangaIds, version });
         return new Blob([payload]).size > 8000;
@@ -126,7 +166,7 @@
         });
 
         if (res.status === 409 && retryCount < 3) {
-            console.warn(`[MDList Cloner] HTTP 409 Conflict. Refetching list version and retrying (Attempt ${retryCount + 1})...`);
+            console.warn(`[MDList Cloner] HTTP 409 Conflict. Refetching list version and retrying (Attempt ${retryCount + 1})....`);
             const latestList = await fetchList(listId, token);
             const latestVersion = latestList.data.attributes.version;
             return await updateList(listId, name, visibility, latestVersion, mangaIds, token, retryCount + 1);
@@ -141,16 +181,14 @@
     function showToast(msg, type = 'success') {
         let toastContainer = document.getElementById('md-custom-toast');
         if (!toastContainer) {
-            const html = `
-                <div id="md-custom-toast" class="md-snackbar__container" style="z-index: 10001; --opacity: 0.9; display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); transition: opacity 0.2s ease;">
-                    <div id="md-custom-toast-bg" class="backdrop-blur-xl md-snackbar p-4 rounded text-white shadow-lg flex items-center gap-4">
-                        <span id="md-custom-toast-msg" class="text-sm font-medium"></span>
-                    </div>
-                </div>
-            `;
-            document.body.insertAdjacentHTML('beforeend', html);
-            toastContainer = document.getElementById('md-custom-toast');
+            toastContainer = createEl('div', { id: 'md-custom-toast', className: 'md-snackbar__container', style: 'z-index: 10001; --opacity: 0.9; display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); transition: opacity 0.2s ease;' },
+                createEl('div', { id: 'md-custom-toast-bg', className: 'backdrop-blur-xl md-snackbar p-4 rounded text-white shadow-lg flex items-center gap-4' },
+                    createEl('span', { id: 'md-custom-toast-msg', className: 'text-sm font-medium' })
+                )
+            );
+            document.body.appendChild(toastContainer);
         }
+
         const bg = document.getElementById('md-custom-toast-bg');
         const msgEl = document.getElementById('md-custom-toast-msg');
 
@@ -169,37 +207,36 @@
     function initDynamicModal() {
         if (document.getElementById('md-dynamic-modal')) return;
 
-        const modalHtml = `
-            <div id="md-dynamic-modal" class="md-modal self-center justify-center fixed inset-0 z-[10000]" style="align-items: center; display: none;">
-                <div id="md-dynamic-shade" class="md-modal__shade fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
-                <div class="md-modal__box flex-grow relative z-10" style="max-width: 470px; max-height: calc(100% - 3rem);">
-                    <div id="md-dynamic-bg" class="bg-background rounded border border-primary">
-                        <div class="flex text-xl px-6 py-4 font-bold">
-                            <span id="md-dynamic-title">Title</span>
-                            <button id="md-dynamic-close" class="ml-auto flex-shrink-0 rounded custom-opacity relative md-btn flex items-center px-3 overflow-hidden accent text rounded-full !px-0" style="min-height: 2rem; min-width: 2rem;" data-v-0082f4a3="">
-                                <span class="flex relative items-center justify-center font-medium select-none w-full pointer-events-none">
-                                    ${ICONS.CLOSE}
-                                </span>
-                            </button>
-                        </div>
-                        <div id="md-dynamic-body" class="text-sm px-6 pb-5 first:pt-4 text-color">
-                            <!-- Dynamic Content Injected Here -->
-                        </div>
-                        <div class="flex flex-wrap gap-4 items-end p-4 pt-0">
-                            <div class="flex flex-row ml-auto gap-4">
-                                <button id="md-dynamic-cancel" class="rounded custom-opacity relative md-btn flex items-center px-3 overflow-hidden" style="min-height: 2.5rem; min-width: 2.5rem;" data-v-0082f4a3="">
-                                    <span id="md-dynamic-cancel-text" class="flex relative items-center justify-center font-medium select-none w-full pointer-events-none">Cancel</span>
-                                </button>
-                                <button id="md-dynamic-confirm" class="rounded custom-opacity relative md-btn flex items-center px-3 overflow-hidden" style="min-height: 2.5rem; min-width: 2.5rem;" data-v-0082f4a3="">
-                                    <span id="md-dynamic-confirm-text" class="flex relative items-center justify-center font-medium select-none w-full pointer-events-none">Confirm</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = createEl('div', { id: 'md-dynamic-modal', className: 'md-modal self-center justify-center fixed inset-0 z-[10000]', style: 'align-items: center; display: none;' });
+        const shade = createEl('div', { id: 'md-dynamic-shade', className: 'md-modal__shade fixed inset-0 bg-black/50 backdrop-blur-sm' });
+
+        const box = createEl('div', { className: 'md-modal__box flex-grow relative z-10', style: 'max-width: 470px; max-height: calc(100% - 3rem);' });
+        const bg = createEl('div', { id: 'md-dynamic-bg', className: 'bg-background rounded border border-primary' });
+
+        const header = createEl('div', { className: 'flex text-xl px-6 py-4 font-bold' },
+            createEl('span', { id: 'md-dynamic-title' }, 'Title'),
+            createEl('button', { id: 'md-dynamic-close', className: 'ml-auto flex-shrink-0 rounded custom-opacity relative md-btn flex items-center px-3 overflow-hidden accent text rounded-full !px-0', style: 'min-height: 2rem; min-width: 2rem;', 'data-v-0082f4a3': '' },
+                createEl('span', { className: 'flex relative items-center justify-center font-medium select-none w-full pointer-events-none' }, ICONS.CLOSE())
+            )
+        );
+
+        const body = createEl('div', { id: 'md-dynamic-body', className: 'text-sm px-6 pb-5 first:pt-4 text-color' });
+
+        const footer = createEl('div', { className: 'flex flex-wrap gap-4 items-end p-4 pt-0' },
+            createEl('div', { className: 'flex flex-row ml-auto gap-4' },
+                createEl('button', { id: 'md-dynamic-cancel', className: 'rounded custom-opacity relative md-btn flex items-center px-3 overflow-hidden', style: 'min-height: 2.5rem; min-width: 2.5rem;', 'data-v-0082f4a3': '' },
+                    createEl('span', { id: 'md-dynamic-cancel-text', className: 'flex relative items-center justify-center font-medium select-none w-full pointer-events-none' }, 'Cancel')
+                ),
+                createEl('button', { id: 'md-dynamic-confirm', className: 'rounded custom-opacity relative md-btn flex items-center px-3 overflow-hidden', style: 'min-height: 2.5rem; min-width: 2.5rem;', 'data-v-0082f4a3': '' },
+                    createEl('span', { id: 'md-dynamic-confirm-text', className: 'flex relative items-center justify-center font-medium select-none w-full pointer-events-none' }, 'Confirm')
+                )
+            )
+        );
+
+        bg.append(header, body, footer);
+        box.append(bg);
+        modal.append(shade, box);
+        document.body.appendChild(modal);
     }
 
     function handleModalKeydown(e) {
@@ -255,7 +292,11 @@
             bgContainer.className = 'bg-background rounded border border-primary';
             titleText.className = '';
             titleText.innerText = 'Loading...';
-            body.innerHTML = `<div class="mb-4 text-midTone text-center py-4">Fetching your lists...</div>`;
+
+            body.replaceChildren(
+                createEl('div', { className: 'mb-4 text-midTone text-center py-4' }, 'Fetching your lists...')
+            );
+
             cancelBtn.style.display = 'none';
             confirmBtn.style.display = 'none';
             document.getElementById('md-dynamic-modal').style.display = 'flex';
@@ -270,29 +311,29 @@
             titleText.className = '';
             titleText.innerText = currentAction === 'import' ? 'Import MDList' : 'Clone MDList';
 
-            const selectOptions = userOwnedListsCache.map(l => `<option value="${l.id}">${escapeHtml(l.attributes.name)}</option>`).join('');
+            const select = createEl('select', { id: 'md-clone-select', className: 'text-color block w-full rounded-md bg-accent outline-1 outline-transparent focus:outline-primary transition-[outline-color] p-3 text-sm cursor-pointer' });
+            select.appendChild(createEl('option', { value: 'new' }, '-- Create New List --'));
+            userOwnedListsCache.forEach(l => {
+                select.appendChild(createEl('option', { value: l.id }, l.attributes.name));
+            });
 
-            body.innerHTML = `
-                <div class="mb-4 text-midTone">Select a destination list. You can create a new list or append to an existing one.</div>
+            const mergeLabel = createEl('label', { id: 'md-clone-merge-label', className: 'items-center gap-2 mt-4 cursor-pointer text-sm text-midTone hover:text-color transition-colors select-none', style: 'display: none;' },
+                createEl('input', { type: 'checkbox', id: 'md-clone-merge-checkbox', className: 'w-4 h-4 rounded accent-primary cursor-pointer' }),
+                createEl('span', {}, 'Merge with existing list (Append new titles)')
+            );
 
-                <div class="relative w-full">
-                    <select id="md-clone-select" class="text-color block w-full rounded-md bg-accent outline-1 outline-transparent focus:outline-primary transition-[outline-color] p-3 text-sm cursor-pointer">
-                        <option value="new">-- Create New List --</option>
-                        ${selectOptions}
-                    </select>
-                </div>
+            const errorDiv = createEl('div', { id: 'md-clone-error', className: 'text-danger hidden font-medium mt-3 whitespace-pre-wrap' });
 
-                <label id="md-clone-merge-label" class="items-center gap-2 mt-4 cursor-pointer text-sm text-midTone hover:text-color transition-colors select-none" style="display: none;">
-                    <input type="checkbox" id="md-clone-merge-checkbox" class="w-4 h-4 rounded accent-primary cursor-pointer" />
-                    <span>Merge with existing list (Append new titles)</span>
-                </label>
-
-                <div id="md-clone-error" class="text-danger hidden font-medium mt-3 whitespace-pre-wrap"></div>
-            `;
+            body.replaceChildren(
+                createEl('div', { className: 'mb-4 text-midTone' }, 'Select a destination list. You can create a new list or append to an existing one.'),
+                createEl('div', { className: 'relative w-full' }, select),
+                mergeLabel,
+                errorDiv
+            );
 
             document.getElementById('md-clone-select').addEventListener('change', (e) => {
-                const mergeLabel = document.getElementById('md-clone-merge-label');
-                mergeLabel.style.display = e.target.value === 'new' ? 'none' : 'flex';
+                const mergeLabelEl = document.getElementById('md-clone-merge-label');
+                mergeLabelEl.style.display = e.target.value === 'new' ? 'none' : 'flex';
             });
 
             cancelBtn.className = "rounded custom-opacity relative md-btn flex items-center px-3 overflow-hidden accent text";
@@ -301,7 +342,7 @@
             confirmBtn.className = "rounded custom-opacity relative md-btn flex items-center px-3 overflow-hidden primary glow";
             confirmBtnSpan.innerText = 'Continue';
 
-            setTimeout(() => document.getElementById('md-clone-input')?.focus(), 100);
+            setTimeout(() => document.getElementById('md-clone-select')?.focus(), 100);
 
         } else if (type === 'confirm') {
             const { targetName, mangaCount, isMerge, diffNew, diffDups } = options;
@@ -311,17 +352,17 @@
                 titleText.className = 'text-primary';
                 titleText.innerText = 'Merge Confirmation';
 
-                body.innerHTML = `
-                    <div>
-                        You are about to securely <b class="text-primary">MERGE</b> the contents of this list into "<b id="md-clone-target-name">${escapeHtml(targetName)}</b>".<br><br>
-                        No existing entries will be deleted. <br>
-                        • <b>${diffNew}</b> new titles will be added.<br>
-                        • <b>${diffDups}</b> duplicates will be skipped.<br><br>
-                        The resulting list will contain <b>${mangaCount}</b> unique titles.<br><br>
-                        Are you sure you want to proceed?
-                    </div>
-                    <div id="md-clone-error" class="text-danger hidden font-medium mt-2 whitespace-pre-wrap"></div>
-                `;
+                body.replaceChildren(
+                    createEl('div', {},
+                        'You are about to securely ', createEl('b', { className: 'text-primary' }, 'MERGE'), ' the contents of this list into "', createEl('b', { id: 'md-clone-target-name' }, targetName), '".', createEl('br'), createEl('br'),
+                        'No existing entries will be deleted.', createEl('br'),
+                        '• ', createEl('b', {}, diffNew.toString()), ' new titles will be added.', createEl('br'),
+                        '• ', createEl('b', {}, diffDups.toString()), ' duplicates will be skipped.', createEl('br'), createEl('br'),
+                        'The resulting list will contain ', createEl('b', {}, mangaCount.toString()), ' unique titles.', createEl('br'), createEl('br'),
+                        'Are you sure you want to proceed?'
+                    ),
+                    createEl('div', { id: 'md-clone-error', className: 'text-danger hidden font-medium mt-2 whitespace-pre-wrap' })
+                );
 
                 cancelBtn.className = "rounded custom-opacity relative md-btn flex items-center px-3 overflow-hidden accent text";
                 cancelBtnSpan.innerText = 'Cancel';
@@ -333,14 +374,14 @@
                 titleText.className = 'text-danger';
                 titleText.innerText = 'Security Check';
 
-                body.innerHTML = `
-                    <div>
-                        You are about to <b class="text-danger">COMPLETELY OVERWRITE</b> "<b id="md-clone-target-name">${escapeHtml(targetName)}</b>".<br><br>
-                        All existing entries will be erased and replaced with the <b id="md-clone-manga-count">${mangaCount}</b> titles from this list.<br><br>
-                        Are you sure you want to permanently delete its old contents?
-                    </div>
-                    <div id="md-clone-error" class="text-danger hidden font-medium mt-2 whitespace-pre-wrap"></div>
-                `;
+                body.replaceChildren(
+                    createEl('div', {},
+                        'You are about to ', createEl('b', { className: 'text-danger' }, 'COMPLETELY OVERWRITE'), ' "', createEl('b', { id: 'md-clone-target-name' }, targetName), '".', createEl('br'), createEl('br'),
+                        'All existing entries will be erased and replaced with the ', createEl('b', { id: 'md-clone-manga-count' }, mangaCount.toString()), ' titles from this list.', createEl('br'), createEl('br'),
+                        'Are you sure you want to permanently delete its old contents?'
+                    ),
+                    createEl('div', { id: 'md-clone-error', className: 'text-danger hidden font-medium mt-2 whitespace-pre-wrap' })
+                );
 
                 cancelBtn.className = "rounded custom-opacity relative md-btn flex items-center px-3 overflow-hidden primary glow";
                 cancelBtnSpan.innerText = 'No';
@@ -663,12 +704,14 @@
             btn.style.minHeight = '2.5rem';
         }
 
-        btn.innerHTML = `
-            <span class="flex relative items-center justify-center font-medium select-none w-full pointer-events-none">
-                ${iconSvg} <span class="hidden sm:inline">${text}</span>
-            </span>
-        `;
+        const spanWrapper = createEl('span', { className: 'flex relative items-center justify-center font-medium select-none w-full pointer-events-none' },
+            iconSvg(),
+            createEl('span', { className: 'hidden sm:inline' }, text)
+        );
+
+        btn.appendChild(spanWrapper);
         btn.addEventListener('click', handler);
+
         return btn;
     }
 
@@ -678,7 +721,7 @@
         // Route: /my/lists (Import and Export All)
         if (path === '/my/lists') {
             if (document.querySelector('.md-bulk-tools-injected')) return;
-            const newBtn = document.querySelector('a[href="/create/list"]');
+            const newBtn = document.querySelector('.new-button');
 
             if (newBtn && newBtn.parentElement) {
                 const parentDiv = newBtn.parentElement;
@@ -700,7 +743,7 @@
                 importBtn.className = "rounded custom-opacity relative md-btn flex items-center px-3 overflow-hidden accent text w-full";
                 importBtn.style.minHeight = '40px';
                 importBtn.setAttribute('data-v-0082f4a3', '');
-                importBtn.innerHTML = `<span class="flex relative items-center justify-center font-medium select-none w-full pointer-events-none">${ICONS.IMPORT} <span>Import</span></span>`;
+                importBtn.appendChild(createEl('span', { className: 'flex relative items-center justify-center font-medium select-none w-full pointer-events-none' }, ICONS.IMPORT(), createEl('span', {}, 'Import')));
                 importBtn.addEventListener('click', handleImportClick);
 
                 importWrap.appendChild(importGlow);
@@ -719,7 +762,7 @@
                 exportBtn.className = "rounded custom-opacity relative md-btn flex items-center px-3 overflow-hidden accent text w-full";
                 exportBtn.style.minHeight = '40px';
                 exportBtn.setAttribute('data-v-0082f4a3', '');
-                exportBtn.innerHTML = `<span class="flex relative items-center justify-center font-medium select-none w-full pointer-events-none">${ICONS.EXPORT} <span>Export All</span></span>`;
+                exportBtn.appendChild(createEl('span', { className: 'flex relative items-center justify-center font-medium select-none w-full pointer-events-none' }, ICONS.EXPORT(), createEl('span', {}, 'Export All')));
                 exportBtn.addEventListener('click', handleExportAll);
 
                 exportWrap.appendChild(exportGlow);
