@@ -48,14 +48,24 @@
   async function apiFetch(url, options = {}, maxRetries = 5) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       const res = await fetch(url, options);
+
       if (res.status === 429) {
         const retrySec = parseInt(res.headers.get('Retry-After') || '2', 10);
         console.warn(`Rate limited (429). Waiting ${retrySec}s...`);
         await sleep(retrySec * 1000);
         continue;
       }
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      return await res.json();
+
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => '');
+        const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
+        err.status = res.status;
+        err.body = errorText;
+        throw err;
+      }
+
+      const text = await res.text();
+      return text ? JSON.parse(text) : { result: 'ok' };
     }
     throw new Error('Exceeded max retries from rate limiting.');
   }
@@ -216,11 +226,26 @@
           headers,
           body: JSON.stringify({ status: null }),
         });
+        await sleep(DELAY_MS);
+
+        try {
+          await apiFetch(`${API_BASE}/manga/${item.id}/follow`, {
+            method: 'DELETE',
+            headers,
+          });
+        } catch (followErr) {
+          // If title wasn't actively followed (only had a status), MangaDex may return 404
+          if (followErr.status !== 404) {
+            console.warn(`Unfollow notice for "${item.title}":`, followErr.message);
+          }
+        }
+        await sleep(DELAY_MS);
+
         console.log(`[${count}/${targetManga.length}] Removed: "${item.title}" (${item.contentRating})`);
       } catch (err) {
         console.error(`Failed removing "${item.title}" (${item.id}):`, err);
+        await sleep(DELAY_MS);
       }
-      await sleep(DELAY_MS);
     }
 
     console.log(`Done! Successfully removed ${count} titles from your library.`);
