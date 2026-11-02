@@ -8,7 +8,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Bartolumiu/random-tools/refs/heads/main/mangadex/userscripts/MD_main_title_lang_select.user.js
 // @author       Bartolumiu
 // @match        https://mangadex.org/*
-// @match        https://canary.mangadex.dev/*
+// @match        https://canary.mangadex.org/*
 // @grant        none
 // @run-at       document-start
 // ==/UserScript==
