@@ -3,7 +3,7 @@
 // @namespace    https://mangadex.org/
 // @description  Add language selector dropdown
 // @icon         https://mangadex.org/favicon.ico
-// @version      0.17
+// @version      0.18
 // @updateURL    https://raw.githubusercontent.com/Bartolumiu/random-tools/refs/heads/main/mangadex/userscripts/MD_main_title_lang_select.user.js
 // @downloadURL  https://raw.githubusercontent.com/Bartolumiu/random-tools/refs/heads/main/mangadex/userscripts/MD_main_title_lang_select.user.js
 // @author       Bartolumiu
