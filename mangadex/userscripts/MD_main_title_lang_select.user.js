@@ -3,7 +3,7 @@
 // @namespace    https://mangadex.org/
 // @description  Add language selector dropdown
 // @icon         https://mangadex.org/favicon.ico
-// @version      0.16
+// @version      0.17
 // @updateURL    https://raw.githubusercontent.com/Bartolumiu/random-tools/refs/heads/main/mangadex/userscripts/MD_main_title_lang_select.user.js
 // @downloadURL  https://raw.githubusercontent.com/Bartolumiu/random-tools/refs/heads/main/mangadex/userscripts/MD_main_title_lang_select.user.js
 // @author       Bartolumiu
@@ -43,6 +43,7 @@
             resource.includes('/api.mangadex.org/manga/')
         ) {
             logOnce('fetch-caught', 'caught manga PUT via fetch');
+            init.credentials = 'include';
             try {
                 const body = JSON.parse(init.body);
                 const titleText = currentTitleText || '';
@@ -291,7 +292,9 @@
             return true;
         }
 
-        fetch(`https://api.mangadex.org/manga/${mangaId}`)
+        fetch(`https://api.mangadex.org/manga/${mangaId}`, {
+            credentials: 'include'
+        })
             .then(r => r.json())
             .then(data => {
                 const titleMap = data?.data?.attributes?.title;
